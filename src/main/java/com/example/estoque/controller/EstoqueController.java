@@ -14,39 +14,61 @@ import java.util.List;
 @RequestMapping("/estoque")
 public class EstoqueController {
 
-    ProdutoService service;
+    private final ProdutoService service;
 
     public EstoqueController(ProdutoService service) {
         this.service = service;
     }
 
     @PostMapping
-    public ResponseEntity<String> cadastraProduto(@RequestBody Produto produto){
+    public ResponseEntity<?> cadastraProduto(@RequestBody Produto produto) {
+        if (produto.getDescricao() == null || produto.getDescricao().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Descrição do produto é obrigatória.");
+        }
+
+        if (produto.getQtd() <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Quantidade do produto deve ser maior que zero.");
+        }
+
+        if (produto.getPreco() <= 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Preço do produto deve ser maior que zero.");
+        }
+
         service.cadastrarProduto(produto);
-        return ResponseEntity.ok().body("Cadastrado com Sucesso");
+
+        return ResponseEntity.ok(produto);
     }
 
+
+
     @GetMapping
-    public ResponseEntity<List<Produto>> listarProdutos(){
+    public ResponseEntity<List<Produto>> listarProdutos() {
         return ResponseEntity.ok().body(service.encontrarTodos());
     }
 
     @GetMapping("/{nome}")
-    public ResponseEntity<Produto> buscaProduto(@PathVariable String nome){
+    public ResponseEntity<Produto> buscaProduto(@PathVariable String nome) {
         return ResponseEntity.ok().body(service.encontrarPorNome(nome));
     }
 
     @PostMapping("/atualizar")
-    public ResponseEntity<String> atualizarEstoque(@RequestBody Pedido pedido){
-        try{
+    public ResponseEntity<String> atualizarEstoque(@RequestBody Pedido pedido) {
+        // Verifica se a lista de itens do pedido está vazia
+        if (pedido.getItens() == null || pedido.getItens().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Itens do pedido não podem ser vazios.");
+        }
+
+        try {
+            // Tenta atualizar o estoque
             service.atualizarEstoque(pedido);
-        }catch (ForaDeEstoqueException e){
+        } catch (ForaDeEstoqueException e) {
+            // Caso o estoque seja insuficiente
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+
+        // Caso a atualização seja bem-sucedida
         return ResponseEntity.ok().body("Estoque Atualizado");
     }
-
-
-
-
 }
+

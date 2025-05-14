@@ -38,17 +38,21 @@ public class ProdutoService {
                 .collect(Collectors.toList());
     }
 
-    public void atualizarEstoque(Pedido pedido){
+    public void atualizarEstoque(Pedido pedido) {
         pedido.getItens().forEach(item -> {
-            ProdutoEntity produto = repository.findById(item.getId()).get();
-            if (produto.getQtd() < item.getQtd()){
+            ProdutoEntity produto = repository.findById(item.getId())
+                    .orElseThrow(() -> new ForaDeEstoqueException("Produto com ID " + item.getId() + " não encontrado"));
+
+            if (produto.getQtd() < item.getQtd()) {
                 throw new ForaDeEstoqueException(
                         "Produto " + produto.getNome() + " possui apenas: " + produto.getQtd() + " em estoque");
             }
+
             produto.setQtd(produto.getQtd() - item.getQtd());
             repository.save(produto);
         });
     }
+
 
     public Produto encontrarPorNome(String nome) {
         return new Produto(repository.findByNome(nome));
